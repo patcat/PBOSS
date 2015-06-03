@@ -1,0 +1,19 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "thatpatrickguy@gmail.com",
+    "longName": "PBOSS",
+    "projectType": "native",
+    "resources": {
+        "media": []
+    },
+    "sdkVersion": "3",
+    "shortName": "PBOSS",
+    "uuid": "2aef4afe-744b-463d-9e6b-b35fea0046c2",
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
+}
