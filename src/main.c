@@ -24,6 +24,13 @@ static Time s_last_time, s_anim_time;
 static int s_radius = 0, s_anim_hours_60 = 0, random_colors[20][20][3];
 static bool s_animating = false;
 
+static GPath *cat_nose_path = NULL;
+
+static const GPathInfo CAT_NOSE_PATH_INFO = {
+  .num_points = 3,
+  .points = (GPoint []) {{0, 0}, {26, 0}, {26/2, 20}}
+};
+
 /*************************** AnimationImplementation **************************/
 
 static void animation_started(Animation *anim, void *context) {
@@ -90,55 +97,52 @@ static void update_proc(Layer *layer, GContext *ctx) {
     }
   }
 
-  // Color background?
-  /*if(COLORS) {
-    graphics_context_set_fill_color(ctx, GColorFromRGB(s_color_channels[0], s_color_channels[1], s_color_channels[2]));
-    graphics_fill_rect(ctx, GRect(0, 0, 144, 168), 0, GCornerNone);
-  }*/
+  // Clock background
+  GPoint clock_center = (GPoint) {
+    .x = 100,
+    .y = 50,
+  };
 
-  graphics_context_set_stroke_color(ctx, GColorBlack);
-  graphics_context_set_stroke_width(ctx, 4);
+  graphics_context_set_fill_color(ctx, GColorChromeYellow);
+  //graphics_fill_rect(ctx, GRect(0, 0, (cube_size*3), (cube_size*3)), 0, GCornerNone);
+  graphics_fill_circle(ctx, GPoint(42, 55), (cube_size*1.2));
+  graphics_fill_circle(ctx, GPoint(100, 55), (cube_size*1.2));
+
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_fill_circle(ctx, GPoint(43, 55), (cube_size*1.1));
+  graphics_fill_circle(ctx, GPoint(99, 55), (cube_size*1.1));
+
+  graphics_context_set_fill_color(ctx, GColorWhite);
+  graphics_fill_circle(ctx, GPoint((43-cube_size*0.75), 50), (cube_size*0.1));
+  graphics_fill_circle(ctx, GPoint((99-cube_size*0.75), 50), (cube_size*0.1));
+
+  gpath_draw_filled(ctx, cat_nose_path);
+
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_context_set_stroke_width(ctx, 2);
 
   graphics_context_set_antialiased(ctx, ANTIALIASING);
 
+  graphics_draw_line(ctx, GPoint(20, 25), GPoint(30, 7));
+  graphics_draw_line(ctx, GPoint(30, 7), GPoint(51, 20));
+
+  graphics_draw_line(ctx, GPoint(91, 20), GPoint(112, 9));
+  graphics_draw_line(ctx, GPoint(112, 9), GPoint(122, 25));
+
+  graphics_draw_line(ctx, GPoint(71, 97), GPoint(80, 110));
+  graphics_draw_line(ctx, GPoint(80, 110), GPoint(100, 110));
+  graphics_draw_line(ctx, GPoint(100, 110), GPoint(110, 97));
+
+  graphics_draw_line(ctx, GPoint(71, 97), GPoint(62, 110));
+  graphics_draw_line(ctx, GPoint(62, 110), GPoint(42, 110));
+  graphics_draw_line(ctx, GPoint(42, 110), GPoint(32, 97));
+
   // White clockface
-  graphics_context_set_fill_color(ctx, GColorWhite);
-  graphics_fill_circle(ctx, s_center, s_radius);
+  //graphics_context_set_fill_color(ctx, GColorWhite);
+  //graphics_fill_circle(ctx, s_center, s_radius);
 
   // Draw outline
-  graphics_draw_circle(ctx, s_center, s_radius);
-
-  // Don't use current time while animating
-  Time mode_time = (s_animating) ? s_anim_time : s_last_time;
-
-  // Adjust for minutes through the hour
-  float minute_angle = TRIG_MAX_ANGLE * mode_time.minutes / 60;
-  float hour_angle;
-  if(s_animating) {
-    // Hours out of 60 for smoothness
-    hour_angle = TRIG_MAX_ANGLE * mode_time.hours / 60;
-  } else {
-    hour_angle = TRIG_MAX_ANGLE * mode_time.hours / 12;
-  }
-  hour_angle += (minute_angle / TRIG_MAX_ANGLE) * (TRIG_MAX_ANGLE / 12);
-
-  // Plot hands
-  GPoint minute_hand = (GPoint) {
-    .x = (int16_t)(sin_lookup(TRIG_MAX_ANGLE * mode_time.minutes / 60) * (int32_t)(s_radius - HAND_MARGIN) / TRIG_MAX_RATIO) + s_center.x,
-    .y = (int16_t)(-cos_lookup(TRIG_MAX_ANGLE * mode_time.minutes / 60) * (int32_t)(s_radius - HAND_MARGIN) / TRIG_MAX_RATIO) + s_center.y,
-  };
-  GPoint hour_hand = (GPoint) {
-    .x = (int16_t)(sin_lookup(hour_angle) * (int32_t)(s_radius - (2 * HAND_MARGIN)) / TRIG_MAX_RATIO) + s_center.x,
-    .y = (int16_t)(-cos_lookup(hour_angle) * (int32_t)(s_radius - (2 * HAND_MARGIN)) / TRIG_MAX_RATIO) + s_center.y,
-  };
-
-  // Draw hands with positive length only
-  if(s_radius > 2 * HAND_MARGIN) {
-    graphics_draw_line(ctx, s_center, hour_hand);
-  } 
-  if(s_radius > HAND_MARGIN) {
-    graphics_draw_line(ctx, s_center, minute_hand);
-  }
+  //graphics_draw_circle(ctx, s_center, s_radius);
 }
 
 static void window_load(Window *window) {
@@ -146,6 +150,10 @@ static void window_load(Window *window) {
   GRect window_bounds = layer_get_bounds(window_layer);
 
   s_center = grect_center_point(&window_bounds);
+
+  cat_nose_path = gpath_create(&CAT_NOSE_PATH_INFO);
+
+  gpath_move_to(cat_nose_path, GPoint(58, 77));
 
   s_canvas_layer = layer_create(window_bounds);
   layer_set_update_proc(s_canvas_layer, update_proc);
