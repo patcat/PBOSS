@@ -16,6 +16,9 @@ static char time_text[] = "00:00";
 
 static int random_colors[50][50][3];
 
+/* --------------------------------------------
+ *  Cat paths
+ * --------------------------------------------*/
 static GPath *cat_nose_path = NULL;
 static GPath *cat_inner_ear_left_path = NULL;
 static GPath *cat_inner_ear_right_path = NULL;
@@ -35,43 +38,20 @@ static const GPathInfo CAT_INNER_EAR_RIGHT = {
   .points = (GPoint []) {{93, 22}, {112, 12}, {120, 25}}
 };
 
-/************************************ UI **************************************/
-static void tick_handler(struct tm *tick_time, TimeUnits changed) {
-  strftime(time_text, sizeof(time_text), "%I:%M", tick_time);
+/* --------------------------------------------
+ *  Cat feature functions
+ * --------------------------------------------*/
+static void init_cat_custom_shapes() {
+  cat_nose_path = gpath_create(&CAT_NOSE_PATH_INFO);
 
-  // Redraw
-  if(s_canvas_layer) {
-    layer_mark_dirty(s_canvas_layer);
-  }
+  cat_inner_ear_left_path = gpath_create(&CAT_INNER_EAR_LEFT);
+  cat_inner_ear_right_path = gpath_create(&CAT_INNER_EAR_RIGHT);
+
+  gpath_move_to(cat_nose_path, GPoint(58, 77));
 }
 
-static void update_proc(Layer *layer, GContext *ctx) {
-  int i, j;
-  GRect bounds = layer_get_bounds(layer);
-  int cube_size = bounds.size.w / PIXEL_COUNT;
-  int cube_count_x = PIXEL_COUNT;
-  int cube_count_y = bounds.size.h / cube_size;
-
-  for (i = 0; i < cube_count_x; i++) {
-    for (j = 0; j < cube_count_y; j++) {
-      random_colors[i][j][0] = 255;
-      random_colors[i][j][1] = rand() % 160 + 96;
-      random_colors[i][j][2] = rand() % 100;
-
-      graphics_context_set_fill_color(ctx, GColorFromRGB(random_colors[i][j][0], random_colors[i][j][1], random_colors[i][j][2]));
-      //graphics_context_set_fill_color(ctx, GColorFromRGB(0,0,255));
-      int x = i*cube_size;
-      int y = j*cube_size;
-      graphics_fill_rect(ctx, GRect(x, y, (x+cube_size), (y+cube_size)), 0, GCornerNone);
-    }
-  }
-
-  // Clock background
-  GPoint clock_center = (GPoint) {
-    .x = 100,
-    .y = 50,
-  };
-
+static void draw_cat(GContext *ctx) {
+  // Eyes
   graphics_context_set_fill_color(ctx, GColorVividCerulean);
   graphics_fill_circle(ctx, GPoint(42, 55), (17));
   graphics_fill_circle(ctx, GPoint(100, 55), (17));
@@ -121,6 +101,49 @@ static void update_proc(Layer *layer, GContext *ctx) {
   graphics_draw_line(ctx, GPoint(71, 95), GPoint(71, 105));
   graphics_draw_line(ctx, GPoint(71, 105), GPoint(80, 118));
   graphics_draw_line(ctx, GPoint(71, 105), GPoint(60, 118));
+}
+
+/* --------------------------------------------
+ *  Keep the time and refresh each minute
+ * --------------------------------------------*/
+static void tick_handler(struct tm *tick_time, TimeUnits changed) {
+  strftime(time_text, sizeof(time_text), "%I:%M", tick_time);
+
+  // Redraw
+  if(s_canvas_layer) {
+    layer_mark_dirty(s_canvas_layer);
+  }
+}
+
+/* --------------------------------------------
+ *  Draw functions
+ * --------------------------------------------*/
+static void draw_pixel_background(Layer *layer, GContext *ctx) {
+  GRect bounds = layer_get_bounds(layer);
+
+  int i, j;
+  
+  int cube_size = bounds.size.w / PIXEL_COUNT;
+  int cube_count_x = PIXEL_COUNT;
+  int cube_count_y = bounds.size.h / cube_size;
+
+  for (i = 0; i < cube_count_x; i++) {
+    for (j = 0; j < cube_count_y; j++) {
+      random_colors[i][j][0] = 255;
+      random_colors[i][j][1] = rand() % 160 + 96;
+      random_colors[i][j][2] = rand() % 100;
+
+      graphics_context_set_fill_color(ctx, GColorFromRGB(random_colors[i][j][0], random_colors[i][j][1], random_colors[i][j][2]));
+
+      int x = i*cube_size;
+      int y = j*cube_size;
+      graphics_fill_rect(ctx, GRect(x, y, (x+cube_size), (y+cube_size)), 0, GCornerNone);
+    }
+  }
+}
+
+static void draw_time(Layer *layer, GContext *ctx) {
+  GRect bounds = layer_get_bounds(layer);
 
   graphics_context_set_text_color(ctx, GColorBlack);
   graphics_draw_text(ctx, time_text, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD), GRect(2, (bounds.size.h - 48), 144, bounds.size.h), GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
@@ -128,16 +151,31 @@ static void update_proc(Layer *layer, GContext *ctx) {
   graphics_draw_text(ctx, time_text, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD), GRect(0, (bounds.size.h - 50), 144, bounds.size.h), GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 }
 
+static void update_proc(Layer *layer, GContext *ctx) {
+  draw_pixel_background(layer, ctx);
+
+  draw_cat(ctx);
+
+  draw_time(layer, ctx);
+}
+
+/* --------------------------------------------
+ *  Init, load and unload functions
+ * --------------------------------------------*/
+static void init_clock() {
+  srand(time(NULL));
+
+  time_t t = time(NULL);
+  struct tm *time_now = localtime(&t);
+  tick_handler(time_now, MINUTE_UNIT);
+  tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+}
+
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect window_bounds = layer_get_bounds(window_layer);
 
-  cat_nose_path = gpath_create(&CAT_NOSE_PATH_INFO);
-
-  cat_inner_ear_left_path = gpath_create(&CAT_INNER_EAR_LEFT);
-  cat_inner_ear_right_path = gpath_create(&CAT_INNER_EAR_RIGHT);
-
-  gpath_move_to(cat_nose_path, GPoint(58, 77));
+  init_cat_custom_shapes();
 
   s_canvas_layer = layer_create(window_bounds);
   layer_set_update_proc(s_canvas_layer, update_proc);
@@ -149,11 +187,7 @@ static void window_unload(Window *window) {
 }
 
 static void init() {
-  srand(time(NULL));
-
-  time_t t = time(NULL);
-  struct tm *time_now = localtime(&t);
-  tick_handler(time_now, MINUTE_UNIT);
+  init_clock();
 
   s_main_window = window_create();
   window_set_window_handlers(s_main_window, (WindowHandlers) {
@@ -161,8 +195,6 @@ static void init() {
     .unload = window_unload,
   });
   window_stack_push(s_main_window, true);
-
-  tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 }
 
 static void deinit() {
